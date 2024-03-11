@@ -12,10 +12,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java_cup.runtime.Symbol;
 import javax.swing.JFileChooser;
+import java.util.HashMap;
+
 
 /**
  *
@@ -26,9 +30,121 @@ public class frmPantalla extends javax.swing.JFrame {
     /**
      * Creates new form FrmPrincipal
      */
+    
+    private String erroresSemanticos = "";
+    private String ambitoActual = "";
+    HashMap<String, String> variablesDeclaradas = new HashMap<>();
+    
     public frmPantalla() {
         initComponents();
         this.setLocationRelativeTo(null);
+    }
+    
+    public void analizarSemantica() throws IOException {
+        // Inicialización de variables
+        ambitoActual = "";
+        erroresSemanticos = "";
+        variablesDeclaradas.clear();
+        String expr = (String) txtResultado.getText();
+        Lexer lexer = new Lexer(new StringReader(expr));
+        boolean seEncontraronErrores = false; // Variable para controlar si se encontraron errores
+        int linea = 1; // Contador de línea
+        String ambitoActual = "otro"; // Ámbito actual (main o otro)
+
+        // Análisis léxico y semántico
+        while (true) {
+            Tokens token = lexer.yylex();
+            if (token == null) {
+                break;
+            }
+
+            switch (token) {
+                case Linea:
+                    linea++;
+                    break;
+                case T_dato:
+                    String tipoDato = lexer.lexeme;
+                    Tokens nextToken = lexer.yylex();
+                    if (nextToken == Tokens.Identificador) {
+                        String identificador = lexer.lexeme;
+                        if (ambitoActual.equals("main")) {
+                            if (variablesDeclaradas.containsKey(identificador)) {
+                            erroresSemanticos += " Error: La variable '" + identificador + "' ya ha sido declarada en el mismo ámbito (línea " + linea + ")\n";
+                            seEncontraronErrores = true;
+                        } else {
+                            variablesDeclaradas.put(identificador, tipoDato);
+                            // Verificar si hay un valor asignado a la variable
+                            Tokens tokenAsignacion = lexer.yylex();
+                            if (tokenAsignacion == Tokens.Igual) {
+                                Tokens tipoValor = lexer.yylex();
+                                if ((tipoDato.equals("int") && tipoValor == Tokens.NumeroDecimal) ||
+                                    (tipoDato.equals("float") && tipoValor != Tokens.Numero && tipoValor != Tokens.NumeroDecimal) || 
+                                        (tipoDato.equals("double") && tipoValor != Tokens.Numero && tipoValor != Tokens.NumeroDecimal)){
+                                    erroresSemanticos += " Error: Tipo de dato incorrecto para la variable '" + identificador + "' (línea " + linea + ")\n";
+                                    seEncontraronErrores = true;
+                                }
+                            }
+                        }
+                        } else {
+                            erroresSemanticos += " Error: Variable '" + identificador + "' declarada fuera de 'main' (línea " + linea + ")\n";
+                            seEncontraronErrores = true;
+                        }
+                    }
+                    break;
+                case Identificador:
+                    String identificador = lexer.lexeme;
+                    if (!variablesDeclaradas.containsKey(identificador)) {
+                        erroresSemanticos += " Error: Variable no declarada '" + identificador + "' (línea " + linea + ")\n";
+                        seEncontraronErrores = true;
+                    } else {
+                        Tokens tokenAsignacion = lexer.yylex();
+                        if (tokenAsignacion == Tokens.Igual) {
+                            String tipoDatoVariable = variablesDeclaradas.get(identificador);
+                            Tokens tipoValor = lexer.yylex();
+                            if ((tipoDatoVariable.equals("int") && tipoValor == Tokens.NumeroDecimal) ||
+                                (tipoDatoVariable.equals("float") && tipoValor != Tokens.Numero && tipoValor != Tokens.NumeroDecimal) ||
+                                (tipoDatoVariable.equals("double") && tipoValor != Tokens.Numero && tipoValor != Tokens.NumeroDecimal)) {
+                                erroresSemanticos += " Error: Tipo de dato incorrecto para la variable '" + identificador + "' (línea " + linea + ")\n";
+                                seEncontraronErrores = true;
+                            }
+                        }
+                    }
+                    break;
+                case Llave_a:
+                    ambitoActual = "main";
+                    break;
+                case Llave_c:
+                    ambitoActual = "otro";
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // Verificación final de errores y mensajes
+         if (!seEncontraronErrores) {
+            erroresSemanticos += "No hay errores semánticos. \n";
+        }
+
+         // Mostrar los errores semánticos
+        txtAnalizarSem.setText(erroresSemanticos);
+    }
+
+    
+    private void analizarSintactico(){
+        // TODO add your handling code here:
+        String ST = txtResultado.getText();
+        Sintax s = new Sintax(new code.LexerCup(new StringReader(ST)));
+        
+        try {
+            s.parse();
+            txtAnalizarSin.setText("Analisis realizado correctamente");
+            txtAnalizarSin.setForeground(new Color(25, 111, 61));
+        } catch (Exception ex) {
+            Symbol sym = s.getS();
+            txtAnalizarSin.setText("Error de sintaxis. Linea: " + (sym.right + 1) + " Columna: " + (sym.left + 1) + ", Texto: \"" + sym.value + "\"");
+            txtAnalizarSin.setForeground(Color.red);
+        }
     }
     
     private void analizarLexico() throws IOException{
@@ -494,19 +610,7 @@ public class frmPantalla extends javax.swing.JFrame {
     }//GEN-LAST:event_btnAnalizarLexActionPerformed
 
     private void btnAnalizarSinActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAnalizarSinActionPerformed
-        // TODO add your handling code here:
-        String ST = txtResultado.getText();
-        Sintax s = new Sintax(new code.LexerCup(new StringReader(ST)));
-        
-        try {
-            s.parse();
-            txtAnalizarSin.setText("Analisis realizado correctamente");
-            txtAnalizarSin.setForeground(new Color(25, 111, 61));
-        } catch (Exception ex) {
-            Symbol sym = s.getS();
-            txtAnalizarSin.setText("Error de sintaxis. Linea: " + (sym.right + 1) + " Columna: " + (sym.left + 1) + ", Texto: \"" + sym.value + "\"");
-            txtAnalizarSin.setForeground(Color.red);
-        }
+        analizarSintactico();
     }//GEN-LAST:event_btnAnalizarSinActionPerformed
 
     private void btnLimpiarEditorActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimpiarEditorActionPerformed
@@ -518,22 +622,10 @@ public class frmPantalla extends javax.swing.JFrame {
         // TODO add your handling code here:
         try {
             analizarLexico();
+            analizarSintactico();
+            analizarSemantica();
         } catch (IOException ex) {
             Logger.getLogger(frmPantalla.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        
-        // TODO add your handling code here:
-        String ST = txtResultado.getText();
-        Sintax s = new Sintax(new code.LexerCup(new StringReader(ST)));
-        
-        try {
-            s.parse();
-            txtAnalizarSin.setText("Analisis realizado correctamente");
-            txtAnalizarSin.setForeground(new Color(25, 111, 61));
-        } catch (Exception ex) {
-            Symbol sym = s.getS();
-            txtAnalizarSin.setText("Error de sintaxis. Linea: " + (sym.right + 1) + " Columna: " + (sym.left + 1) + ", Texto: \"" + sym.value + "\"");
-            txtAnalizarSin.setForeground(Color.red);
         }
     }//GEN-LAST:event_btnAnalisisActionPerformed
 
@@ -542,15 +634,25 @@ public class frmPantalla extends javax.swing.JFrame {
         txtResultado.setText(null);
         txtAnalizarLex.setText(null);
         txtAnalizarSin.setText(null);
+        txtAnalizarSem.setText(null);
+        erroresSemanticos="";
+        variablesDeclaradas.clear();
     }//GEN-LAST:event_btnLimpiarGeneralActionPerformed
 
     private void btnAnalizarSemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAnalizarSemActionPerformed
-        // TODO add your handling code here:
+        try {
+            // TODO add your handling code here:
+            analizarSemantica();
+        } catch (IOException ex) {
+            Logger.getLogger(frmPantalla.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }//GEN-LAST:event_btnAnalizarSemActionPerformed
 
     private void btnLimpiarSemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimpiarSemActionPerformed
         // TODO add your handling code here:
         txtAnalizarSem.setText(null);
+        erroresSemanticos="";
+        variablesDeclaradas.clear();
     }//GEN-LAST:event_btnLimpiarSemActionPerformed
 
     /**

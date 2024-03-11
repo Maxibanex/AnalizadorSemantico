@@ -12,8 +12,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java_cup.runtime.Symbol;
@@ -32,8 +30,8 @@ public class frmPantalla extends javax.swing.JFrame {
      */
     
     private String erroresSemanticos = "";
-    private String ambitoActual = "";
-    HashMap<String, String> variablesDeclaradas = new HashMap<>();
+    private String ambitoActual = ""; //para almacenar el ambito actual "solo funciona con main"
+    HashMap<String, String> variablesDeclaradas = new HashMap<>(); //Para almacenar las variables declaradas
     
     public frmPantalla() {
         initComponents();
@@ -67,13 +65,15 @@ public class frmPantalla extends javax.swing.JFrame {
                     Tokens nextToken = lexer.yylex();
                     if (nextToken == Tokens.Identificador) {
                         String identificador = lexer.lexeme;
+                        // Verificar si la variable se declaro dentro de main o no
                         if (ambitoActual.equals("main")) {
+                            //validar si la variable se ha declarado mas de una vez
                             if (variablesDeclaradas.containsKey(identificador)) {
                             erroresSemanticos += " Error: La variable '" + identificador + "' ya ha sido declarada en el mismo ámbito (línea " + linea + ")\n";
                             seEncontraronErrores = true;
                         } else {
                             variablesDeclaradas.put(identificador, tipoDato);
-                            // Verificar si hay un valor asignado a la variable
+                            // Verificar si hay un valor asignado a la variable y que este sea el corecto
                             Tokens tokenAsignacion = lexer.yylex();
                             if (tokenAsignacion == Tokens.Igual) {
                                 Tokens tipoValor = lexer.yylex();
@@ -93,11 +93,13 @@ public class frmPantalla extends javax.swing.JFrame {
                     break;
                 case Identificador:
                     String identificador = lexer.lexeme;
+                    // Verificar si la variable no ha sido declarada
                     if (!variablesDeclaradas.containsKey(identificador)) {
                         erroresSemanticos += " Error: Variable no declarada '" + identificador + "' (línea " + linea + ")\n";
                         seEncontraronErrores = true;
                     } else {
                         Tokens tokenAsignacion = lexer.yylex();
+                        // Verificar si hay un valor asignado a la variable y que este sea el corecto
                         if (tokenAsignacion == Tokens.Igual) {
                             String tipoDatoVariable = variablesDeclaradas.get(identificador);
                             Tokens tipoValor = lexer.yylex();
@@ -635,8 +637,6 @@ public class frmPantalla extends javax.swing.JFrame {
         txtAnalizarLex.setText(null);
         txtAnalizarSin.setText(null);
         txtAnalizarSem.setText(null);
-        erroresSemanticos="";
-        variablesDeclaradas.clear();
     }//GEN-LAST:event_btnLimpiarGeneralActionPerformed
 
     private void btnAnalizarSemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAnalizarSemActionPerformed
@@ -651,8 +651,6 @@ public class frmPantalla extends javax.swing.JFrame {
     private void btnLimpiarSemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimpiarSemActionPerformed
         // TODO add your handling code here:
         txtAnalizarSem.setText(null);
-        erroresSemanticos="";
-        variablesDeclaradas.clear();
     }//GEN-LAST:event_btnLimpiarSemActionPerformed
 
     /**

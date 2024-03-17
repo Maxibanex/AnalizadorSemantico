@@ -22,17 +22,17 @@ Leer Capítulo 5 del Libro Compiladores, Principios, Técnicas y exponer en clas
 
 
 # Código para prueba
-int main() {
-  int a = 0;
-  int i = 0.5; // debe dar error porque es entero
-  float p = 0.5;
-  int d = 0;
-  int d=0; //debe dar error porque ya fue declarada
-
-  for (a = 0; a < 3; a++) {
-    i++;
-    d = i;
-  }
-  d=0.5; // debe dar error porque es entera
-
-}
+int main() {  
+  int a = 0;  
+  int i = 0.5; // debe dar error porque es entero  
+  float p = 0.5;  
+  int d = 0;  
+  int d=0; //debe dar error porque ya fue declarada  
+  
+  for (a = 0; a < 3; a++) {  
+    i++;  
+    d = i;  
+  }  
+  d=0.5; // debe dar error porque es entera  
+  
+}  
